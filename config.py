@@ -10,7 +10,7 @@ CHANNEL_LOGS = -1004364812976  # ID de tu canal de logs
 ADMINS = [8831594637, 8831594637]
 
 # 🔌 𝐂𝐎𝐍𝐄𝐗𝐈𝐎𝐍 𝐀 𝐋𝐀 𝐀𝐏𝐈
-API_KEY = "TU_API_KEY_AQUI"  # Key de tu proveedor de servicios
+API_KEY = "59c9b7701d64e6dd70714d0311b6a1f2"  # Key de tu proveedor de servicios
 API_URL = "https://api.servicios.com/panel/api" # URL de tu API
 
 # ==============================================
