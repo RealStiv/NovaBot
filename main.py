@@ -438,6 +438,38 @@ def cmd_reiniciar(message):
 # ==============================================
 # 🚀 INICIAR BOT
 # ==============================================
+   # ... todo tu código anterior ...
+# ... todos tus comandos ...
+# ... todo lo demás ...
+
+
+# ==============================================
+# 🛡️ AQUÍ PONES LO NUEVO QUE TE DI
+# ==============================================
+
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    if not verificar_acceso(message.chat.id, message.from_user.id):
+        bloquear_spam(message, bot)
+        return
+
+    texto = message.text
+    
+    if texto == "📢 Panel Grupos":
+        if message.from_user.id in ADMINS:
+            bot.send_message(message.chat.id, panel_admin_grupos(), parse_mode="html")
+            
+    elif texto == "📋 Lista Grupos":
+        if message.from_user.id in ADMINS:
+            bot.send_message(message.chat.id, listar_grupos_autorizados(), parse_mode="html")
+            
+    # ... y todo lo demás ...
+
+
+# ==============================================
+# 🚀 Y AL FINAL QUEDA ESTO
+# ==============================================
+    
     while True:
         try:
             bot.polling(none_stop=True, interval=1, timeout=20)
