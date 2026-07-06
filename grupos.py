@@ -9,7 +9,6 @@ from functions import *
 # ⚙️ CONFIGURACIÓN
 # ==============================================
 
-# ✅ LISTA BLANCA: Grupos donde SÍ puede funcionar
 GRUPOS_AUTORIZADOS = []
 
 # ==============================================
@@ -59,11 +58,10 @@ def panel_admin_grupos():
 🔹 /saldo [ID] - Ver saldo del usuario
 🔹 /ban [ID] - Banear usuario
 🔹 /unban [ID] - Desbanear usuario
-🔹 /buscar [Nombre] - Buscar usuario
 
 🛡️ <b>𝐒𝐄𝐆𝐔𝐑𝐈𝐃𝐀𝐃</b>
 ✅ Anti-spam activado
-✅ Bloqueo automático en grupos no autorizados
+✅ Bloqueo automático en grupos no autorizado
 """
 
 # ==============================================
@@ -102,13 +100,11 @@ def info_grupo_actual(message):
 """
 
 # ==============================================
-# 👤 FUNCIONES DE USUARIOS (NUEVO)
+# 👤 FUNCIONES DE USUARIOS
 # ==============================================
 
 def info_usuario_completo(user_id, bot):
-    """Muestra toda la información del usuario"""
     try:
-        # Obtener datos de la DB
         conn = conectar_db()
         c = conn.cursor()
         c.execute("SELECT nombre, saldo, nivel, baneado FROM usuarios WHERE id=?", (user_id,))
@@ -124,14 +120,10 @@ def info_usuario_completo(user_id, bot):
             nivel = "1"
             estado = "⚫ SIN REGISTRO"
 
-        # Intentar obtener nombre real de Telegram
         try:
             user_chat = bot.get_chat(user_id)
             nombre_real = user_chat.first_name
-            if user_chat.username:
-                username = f"@{user_chat.username}"
-            else:
-                username = "Sin usuario"
+            username = f"@{user_chat.username}" if user_chat.username else "Sin usuario"
         except:
             nombre_real = nombre
             username = "No disponible"
@@ -176,14 +168,40 @@ def desbanear_usuario_db(user_id):
         return False, "❌ Error al desbanear"
 
 # ==============================================
-# 📌 FUNCIONES OBLIGATORIAS
+# 🔘 MANEJADOR DE BOTONES INLINE (CALLBACK)
 # ==============================================
 
-def usuario_esta_en_grupos(user_id, bot):
-    return True
+def manejar_callback(call, bot):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    data = call.data
 
-def aviso_unirse():
-    return ""
+    # Solo admins
+    if user_id not in ADMINS:
+        bot.answer_callback_query(call.id, text="❌ No permitido", show_alert=True)
+        return
 
-def obtener_enlaces():
-    return {}
+    # CONECTAR CON FUNCIONES
+    if data == "panel_grupos":
+        bot.send_message(chat_id, panel_admin_grupos(), parse_mode="html")
+        
+    elif data == "lista_grupos":
+        bot.send_message(chat_id, listar_grupos_autorizados(), parse_mode="html")
+        
+    elif data == "info_grupo":
+        bot.send_message(chat_id, info_grupo_actual(call.message), parse_mode="html")
+        
+    elif data == "ver_usuario":
+        bot.send_message(chat_id, "⚠️ Usa: /userinfo [ID]", parse_mode="html")
+        
+    elif data == "ver_saldo":
+        bot.send_message(chat_id, "⚠️ Usa: /saldo [ID]", parse_mode="html")
+        
+    elif data == "banear_usuario":
+        bot.send_message(chat_id, "⚠️ Usa: /ban [ID]", parse_mode="html")
+        
+    elif data == "desbanear_usuario":
+        bot.send_message(chat_id, "⚠️ Usa: /unban [ID]", parse_mode="html")
+
+    # Quitar carga
+    bot.answer_callback_query(call.id)
