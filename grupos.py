@@ -1,310 +1,21 @@
 # ==============================================
-# 🛡️ SISTEMA COMPLETO - NOVA BOT
+# 🛡️ SISTEMA DE GRUPOS Y ADMIN
 # ==============================================
-import time
-from config import *
-from functions import *
+import sqlite3
+import random
+import requests
 from telebot import types
-from datetime import datetime
-
-# ⚙️ CONFIGURACIÓN
-GRUPOS_AUTORIZADOS = []
-inicio_bot = datetime.now()
 
 # ==============================================
-# 🛡️ SEGURIDAD
+# 💾 CONEXIÓN
 # ==============================================
-def verificar_acceso(chat_id, user_id):
-    return user_id in ADMINS or chat_id > 0 or chat_id in GRUPOS_AUTORIZADOS
+def conectar_db():
+    conn = sqlite3.connect('database.db')
+    return conn
 
-def bloquear_spam(message, bot):
-    try:
-        bot.delete_message(message.chat.id, message.message_id)
-        aviso = bot.send_message(message.chat.id, "❌ <b>PROHIBIDO</b>\nSolo funciona en privado.", parse_mode="html")
-        time.sleep(3)
-        bot.delete_message(message.chat.id, aviso.message_id)
-        return True
-    except: return False
-
-# ==============================================
-# 🎛️ PANEL PRINCIPAL ADMIN
-# ==============================================
-def panel_admin():
-    texto = """
-⚙️ <b>𝐏𝐀𝐍𝐄𝐋 𝐃𝐄 𝐀𝐃𝐌𝐈𝐍</b> ⚙️
-
-👥 <b>𝐆𝐄𝐒𝐓𝐈Ó𝐍 𝐃𝐄 𝐆𝐑𝐔𝐏𝐎𝐒</b>
-👤 <b>𝐆𝐄𝐒𝐓𝐈Ó𝐍 𝐃𝐄 𝐔𝐒𝐔𝐀𝐑𝐈𝐎𝐒</b>
-💳 <b>𝐌𝐎𝐍𝐈𝐓𝐎𝐑𝐄𝐎 𝐃𝐄 𝐏𝐀𝐆𝐎𝐒</b>
-🧑‍💼 <b>𝐑𝐄𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑𝐄𝐒</b>
-🚀 <b>𝐇𝐄𝐑𝐑𝐀𝐌𝐈𝐄𝐍𝐓𝐀𝐒</b>
-"""
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    btn = [
-        types.InlineKeyboardButton("📋 Lista Grupos", callback_data="lista_grupos"),
-        types.InlineKeyboardButton("ℹ️ Info Grupo", callback_data="info_grupo"),
-        types.InlineKeyboardButton("👤 Ver Usuario", callback_data="ver_usuario"),
-        types.InlineKeyboardButton("💰 Ver Saldo", callback_data="ver_saldo"),
-        types.InlineKeyboardButton("📜 Historial", callback_data="historial"),
-        types.InlineKeyboardButton("⏳ Pendientes", callback_data="pendientes"),
-        types.InlineKeyboardButton("📊 Métodos", callback_data="metodos"),
-        types.InlineKeyboardButton("📈 Stats Pagos", callback_data="stats_pagos"),
-        types.InlineKeyboardButton("📊 General", callback_data="stats_total"),
-        types.InlineKeyboardButton("⏱️ Tiempo", callback_data="tiempo"),
-        types.InlineKeyboardButton("🎫 Soporte", callback_data="ver_soporte"),
-        types.InlineKeyboardButton("📢 Enviar", callback_data="enviar_msj"),
-        types.InlineKeyboardButton("🧑‍💼 Revendedores", callback_data="list_rev"),
-        types.InlineKeyboardButton("📊 Monitoreo", callback_data="monitoreo"),
-        types.InlineKeyboardButton("🔄 Reiniciar", callback_data="reiniciar")
-    ]
-    markup.add(*btn)
-    return texto, markup
-
-# ==============================================
-# 👥 GRUPOS
-# ==============================================
-def add_grupo(id_grupo):
-    if id_grupo not in GRUPOS_AUTORIZADOS:
-        GRUPOS_AUTORIZADOS.append(id_grupo)
-        return True, f"✅ <b>GRUPO AUTORIZADO</b>\nID: <code>{id_grupo}</code>"
-    return False, "⚠️ Ya existe"
-
-def del_grupo(id_grupo):
-    if id_grupo in GRUPOS_AUTORIZADOS:
-        GRUPOS_AUTORIZADOS.remove(id_grupo)
-        return True, f"❌ <b>GRUPO ELIMINADO</b>\nID: <code>{id_grupo}</code>"
-    return False, "⚠️ No existe"
-
-def listar_grupos():
-    if not GRUPOS_AUTORIZADOS: return "📝 <b>SIN GRUPOS</b>"
-    return "📋 <b>GRUPOS AUTORIZADOS:</b>\n\n" + "\n".join(f"🔹 <code>{g}</code>" for g in GRUPOS_AUTORIZADOS)
-
-def info_grupo(msg):
-    return f"""
-ℹ️ <b>INFORMACIÓN</b>
-
-🏷️ <b>Nombre:</b> {msg.chat.title}
-🆔 <b>ID:</b> <code>{msg.chat.id}</code>
-👥 <b>Tipo:</b> {msg.chat.type}
-🔐 <b>Estado:</b> {"✅ AUTORIZADO" if msg.chat.id in GRUPOS_AUTORIZADOS else "❌ NO AUTORIZADO"}
-"""
-
-# ==============================================
-# 👤 USUARIOS
-# ==============================================
-def info_user(uid, bot):
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT nombre, saldo, nivel, baneado FROM usuarios WHERE id=?", (uid,))
-        u = c.fetchone() or ("Desconocido", 0, "1", 0)
-        nombre, saldo, nivel, baneado = u
-        estado = "🔴 BANEADO" if baneado else "🟢 ACTIVO"
-        try:
-            user = bot.get_chat(uid)
-            nombre = user.first_name
-            usuario = f"@{user.username}" if user.username else "Sin usuario"
-        except: usuario = "No disponible"
-        return f"""
-👤 <b>𝐃𝐀𝐓𝐎𝐒</b>
-
-🆔 <b>ID:</b> <code>{uid}</code>
-📛 <b>Nombre:</b> {nombre}
-🔖 <b>Usuario:</b> {usuario}
-💰 <b>Saldo:</b> <b>${saldo}</b>
-💎 <b>Nivel:</b> {nivel}
-🛡️ <b>Estado:</b> {estado}
-"""
-    except: return "❌ Error"
-
-def saldo_user(uid):
-    return f"💰 <b>SALDO:</b> <code>{uid}</code>\n💲 <b>${get_saldo(uid)}</b>"
-
-def ban_user(uid):
-    try:
-        conn = conectar_db()
-        conn.cursor().execute("UPDATE usuarios SET baneado=1 WHERE id=?", (uid,))
-        conn.commit()
-        return True, f"🔨 <b>BANEADO</b>\nID: <code>{uid}</code>"
-    except: return False, "❌ Error"
-
-def unban_user(uid):
-    try:
-        conn = conectar_db()
-        conn.cursor().execute("UPDATE usuarios SET baneado=0 WHERE id=?", (uid,))
-        conn.commit()
-        return True, f"✅ <b>DESBANEADO</b>\nID: <code>{uid}</code>"
-    except: return False, "❌ Error"
-
-# ==============================================
-# 💳 PAGOS
-# ==============================================
-def historial_pagos():
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT id, user_id, monto, metodo, estado FROM pagos ORDER BY id DESC LIMIT 15")
-        pagos = c.fetchall()
-        if not pagos: return "📝 <b>SIN PAGOS</b>"
-        txt = "📜 <b>HISTORIAL</b>\n\n"
-        for p in pagos:
-            icono = "✅" if p[4]=="pagado" else "⏳" if p[4]=="pendiente" else "❌"
-            txt += f"{icono} <b>#{p[0]}</b> | 👤 <code>{p[1]}</code>\n💰 ${p[2]} | 💳 {p[3]}\n──────────\n"
-        return txt
-    except: return "❌ Error"
-
-def pendientes_pagos():
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT id, user_id, monto, metodo FROM pagos WHERE estado='pendiente'")
-        pagos = c.fetchall()
-        if not pagos: return "✅ <b>SIN PENDIENTES</b>"
-        return "⏳ <b>PENDIENTES</b>\n\n" + "\n".join(f"🔸 <b>#{p[0]}</b> | 👤 <code>{p[1]}</code> | 💰 ${p[2]} | 💳 {p[3]}" for p in pagos)
-    except: return "❌ Error"
-
-def metodos_pago():
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT metodo, COUNT(*), SUM(monto) FROM pagos GROUP BY metodo")
-        datos = c.fetchall()
-        if not datos: return "📊 <b>SIN DATOS</b>"
-        return "📊 <b>MÉTODOS</b>\n\n" + "\n".join(f"💳 <b>{m}</b>\n📦 {c} ops | 💰 ${t}" for m,c,t in datos)
-    except: return "❌ Error"
-
-def stats_pagos():
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT COUNT(*), SUM(monto) FROM pagos WHERE estado='pagado'")
-        total, dinero = c.fetchone()
-        c.execute("SELECT COUNT(*) FROM pagos WHERE estado='pendiente'")
-        pend = c.fetchone()[0]
-        return f"📈 <b>STATS PAGOS</b>\n✅ Exitosos: {total or 0}\n💵 Total: ${dinero or 0}\n⏳ Pendientes: {pend or 0}"
-    except: return "❌ Error"
-
-# ==============================================
-# 🚀 HERRAMIENTAS EXTRAS
-# ==============================================
 def hora_actual():
+    from datetime import datetime
     return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-
-def tiempo_activo():
-    delta = datetime.now() - inicio_bot
-    return f"⏱️ <b>TIEMPO ACTIVO</b>\n{delta.days} días, {delta.seconds//3600}h {(delta.seconds%3600)//60}m"
-
-def stats_generales():
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT COUNT(*) FROM usuarios")
-        total_u = c.fetchone()[0]
-        c.execute("SELECT COUNT(*) FROM usuarios WHERE baneado=0")
-        activos = c.fetchone()[0]
-        c.execute("SELECT SUM(monto) FROM pagos WHERE estado='pagado'")
-        total_d = c.fetchone()[0] or 0
-        return f"""
-📈 <b>ESTADÍSTICAS GENERALES</b>
-
-👥 <b>Total:</b> {total_u}
-🟢 <b>Activos:</b> {activos}
-🔴 <b>Baneados:</b> {total_u - activos}
-💵 <b>Total:</b> ${total_d}
-📅 <b>{hora_actual()}</b>
-"""
-    except: return "❌ Error"
-
-def enviar_masivo(texto, bot):
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT id FROM usuarios WHERE baneado=0")
-        enviados = 0
-        for uid in c.fetchall():
-            try:
-                bot.send_message(uid[0], texto, parse_mode="html")
-                enviados += 1
-            except: pass
-        return f"✅ <b>ENVIADO A {enviados} USUARIOS</b>"
-    except: return "❌ Error"
-
-def registrar_soporte(uid, mensaje):
-    try:
-        conn = conectar_db()
-        conn.cursor().execute("INSERT INTO soporte (user_id, mensaje, fecha) VALUES (?, ?, ?)", 
-                            (uid, mensaje, hora_actual()))
-        conn.commit()
-        return "✅ <b>ENVIADO</b>\nUn admin te responderá pronto."
-    except: return "❌ Error"
-
-def ver_soporte():
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT * FROM soporte ORDER BY id DESC LIMIT 10")
-        tickets = c.fetchall()
-        if not tickets: return "📝 <b>SIN SOPORTE</b>"
-        txt = "🎫 <b>SOPORTE</b>\n\n"
-        for t in tickets:
-            txt += f"🔸 <b>ID:</b> {t[0]}\n👤 <code>{t[1]}</code>\n💬 {t[2]}\n📅 {t[3]}\n──────────\n"
-        return txt
-    except: return "❌ Error"
-
-# ==============================================
-# 🧑‍💼 SISTEMA DE REVENDEDORES
-# ==============================================
-def panel_revendedor(uid):
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT comision, ganancias FROM revendedores WHERE user_id=?", (uid,))
-        res = c.fetchone()
-        if not res: return "❌ <b>NO ERES REVENDEDOR</b>"
-        com, gan = res
-        return f"""
-🧑‍💼 <b>𝐏𝐀𝐍𝐄𝐋 𝐑𝐄𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑</b>
-
-📊 <b>TUS DATOS</b>
-🔹 Comisión: {com}%
-💰 Ganancias: ${gan}
-
-📋 <b>OPCIONES</b>
-🔹 /misventas - Ver ventas
-🔹 /retirar - Solicitar retiro
-"""
-    except: return "❌ Error"
-
-def ver_mis_ventas(uid):
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT * FROM ventas_rev WHERE rev_id=? ORDER BY id DESC LIMIT 15", (uid,))
-        ventas = c.fetchall()
-        if not ventas: return "📝 <b>SIN VENTAS</b>"
-        txt = "📜 <b>MIS VENTAS</b>\n\n"
-        for v in ventas:
-            txt += f"🔸 <b>#{v[0]}</b>\n👤 <code>{v[2]}</code>\n💰 ${v[3]}\n💸 Ganaste: ${v[4]}\n📅 {v[5]}\n──────────\n"
-        return txt
-    except: return "❌ Error"
-
-def add_revendedor(uid, porcentaje):
-    try:
-        conn = conectar_db()
-        conn.cursor().execute("REPLACE INTO revendedores VALUES (?, ?, 0)", (uid, porcentaje))
-        conn.commit()
-        return f"✅ <b>REVENDEDOR AGREGADO</b>\nID: <code>{uid}</code>\nComisión: {porcentaje}%"
-    except: return "❌ Error"
-
-def del_revendedor(uid):
-    try:
-        conn = conectar_db()
-        conn.cursor().execute("DELETE FROM revendedores WHERE user_id=?", (uid,))
-        conn.commit()
-        return "❌ <b>ELIMINADO</b>"
-    except: return "❌ Error"
-
-def lista_revendedores():
-    try:
-        c = conectar_db().cursor()
-        c.execute("SELECT * FROM revendedores")
-        rev = c.fetchall()
-        if not rev: return "📝 <b>SIN REVENDEDORES</b>"
-        txt = "📋 <b>REVENDEDORES</b>\n\n"
-        for r in rev:
-            txt += f"🔹 <code>{r[0]}</code>\n💼 {r[1]}% | 💰 ${r[2]}\n──────────\n"
-        return txt
-    except: return "❌ Error"
 
 # ==============================================
 # 📊 PANEL DE MONITOREO TOTAL
@@ -312,14 +23,12 @@ def lista_revendedores():
 def panel_monitoreo():
     try:
         c = conectar_db().cursor()
-        
-        # GENERAL
         c.execute("SELECT COUNT(*), SUM(saldo) FROM usuarios")
         total_u, saldo_t = c.fetchone()
         c.execute("SELECT COUNT(*), SUM(monto) FROM pagos WHERE estado='pagado'")
         total_p, dinero_t = c.fetchone()
-        
-        # REVENDEDORES Y COMISIONES
+        c.execute("SELECT COUNT(*) FROM pagos WHERE estado='pendiente'")
+        pendientes = c.fetchone()[0]
         c.execute("SELECT COUNT(*), SUM(ganancias) FROM revendedores")
         total_r, comisiones_t = c.fetchone()
         c.execute("SELECT SUM(ganancia) FROM ventas_rev")
@@ -328,52 +37,429 @@ def panel_monitoreo():
         return f"""
 📊 <b>𝐏𝐀𝐍𝐄𝐋 𝐃𝐄 𝐌𝐎𝐍𝐈𝐓𝐎𝐑𝐄𝐎 𝐓𝐎𝐓𝐀𝐋</b> 📊
 
-👥 <b>USUARIOS</b>
+👥 <b>𝐔𝐒𝐔𝐀𝐑𝐈𝐎𝐒</b>
 🔹 Total: <b>{total_u}</b>
 🔹 Saldo total: <b>${saldo_t or 0}</b>
 
-💳 <b>PAGOS</b>
+💳 <b>𝐏𝐀𝐆𝐎𝐒</b>
 🔹 Exitosos: <b>{total_p or 0}</b>
 🔹 Recaudado: <b>${dinero_t or 0}</b>
+🔹 Pendientes: <b>{pendientes or 0}</b>
 
-🧑‍💼 <b>REVENDEDORES</b>
+🧑‍💼 <b>𝐑𝐄𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑𝐄𝐒</b>
 🔹 Total: <b>{total_r or 0}</b>
-🔹 Comisiones generadas: <b>${comisiones_t or 0}</b>
-🔹 Comisiones pagadas: <b>${comisiones_pagadas}</b>
-🔹 Ganancia neta: <b>${(dinero_t or 0) - comisiones_pagadas}</b>
+🔹 Comisiones: <b>${comisiones_t or 0}</b>
+🔹 Ganancia Neta: <b>${(dinero_t or 0) - comisiones_pagadas}</b>
 
 📅 <b>{hora_actual()}</b>
 """
     except: return "❌ Error"
 
 # ==============================================
-# 🔘 MANEJADOR DE BOTONES
+# 🎛️ MENÚS Y BOTONES
 # ==============================================
-def botones(call, bot):
-    uid = call.from_user.id
-    chat = call.message.chat.id
-    data = call.data
 
-    if uid not in ADMINS:
-        bot.answer_callback_query(call.id, "❌ No permitido", show_alert=True)
-        return
+def botones_principales():
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    btn1 = types.InlineKeyboardButton("💳 Mi Saldo", callback_data="saldo")
+    btn2 = types.InlineKeyboardButton("📜 Historial", callback_data="movimientos")
+    btn3 = types.InlineKeyboardButton("🏅 Mi Nivel", callback_data="nivel")
+    btn4 = types.InlineKeyboardButton("👥 Referidos", callback_data="refs")
+    btn5 = types.InlineKeyboardButton("💳 Recargar", callback_data="recargar")
+    markup.add(btn1, btn2, btn3, btn4, btn5)
+    return markup
 
-    if data == "lista_grupos": bot.send_message(chat, listar_grupos(), parse_mode="html")
-    elif data == "info_grupo": bot.send_message(chat, info_grupo(call.message), parse_mode="html")
-    elif data == "ver_usuario": bot.send_message(chat, "⚠️ /userinfo [ID]", parse_mode="html")
-    elif data == "ver_saldo": bot.send_message(chat, "⚠️ /saldo [ID]", parse_mode="html")
-    elif data == "historial": bot.send_message(chat, historial_pagos(), parse_mode="html")
-    elif data == "pendientes": bot.send_message(chat, pendientes_pagos(), parse_mode="html")
-    elif data == "metodos": bot.send_message(chat, metodos_pago(), parse_mode="html")
-    elif data == "stats_pagos": bot.send_message(chat, stats_pagos(), parse_mode="html")
-    elif data == "stats_total": bot.send_message(chat, stats_generales(), parse_mode="html")
-    elif data == "tiempo": bot.send_message(chat, tiempo_activo(), parse_mode="html")
-    elif data == "ver_soporte": bot.send_message(chat, ver_soporte(), parse_mode="html")
-    elif data == "enviar_msj": bot.send_message(chat, "⚠️ /enviar [mensaje]", parse_mode="html")
-    elif data == "list_rev": bot.send_message(chat, lista_revendedores(), parse_mode="html")
-    elif data == "monitoreo": bot.send_message(chat, panel_monitoreo(), parse_mode="html")
-    elif data == "reiniciar":
-        bot.send_message(chat, "🔄 <b>REINICIANDO...</b>", parse_mode="html")
-        exit()
+def botones_admin():
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    btn1 = types.InlineKeyboardButton("📊 MONITOREO", callback_data="admin_panel")
+    btn2 = types.InlineKeyboardButton("📋 VER LOGS", callback_data="admin_logs")
+    btn3 = types.InlineKeyboardButton("💰 VER RETIROS", callback_data="admin_retiros")
+    btn4 = types.InlineKeyboardButton("🏆 TOP USUARIOS", callback_data="admin_top")
+    btn5 = types.InlineKeyboardButton("👮 SUB-ADMINS", callback_data="admin_subs")
+    btn6 = types.InlineKeyboardButton("📤 EXPORTAR", callback_data="admin_export")
+    btn7 = types.InlineKeyboardButton("🔧 MANTENIMIENTO", callback_data="admin_mantenimiento")
+    markup.add(btn1, btn2, btn3, btn4, btn5, btn6, btn7)
+    return markup
 
-    bot.answer_callback_query(call.id)
+# ==============================================
+# 🚀 FUNCIONES DE NEGOCIO
+# ==============================================
+
+# 💸 RETIROS
+def solicitar_retiro(uid, monto):
+    try:
+        monto = float(monto)
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("SELECT ganancias FROM revendedores WHERE user_id=?", (uid,))
+        res = c.fetchone()
+        if not res: return "❌ No eres revendedor"
+        gan = res[0]
+        if gan >= monto:
+            c.execute("UPDATE revendedores SET ganancias = ganancias - ? WHERE user_id=?", (monto, uid))
+            c.execute("INSERT INTO retiros (rev_id, monto, estado, fecha) VALUES (?, ?, 'pendiente', ?)", 
+                      (uid, monto, hora_actual()))
+            conn.commit()
+            conn.close()
+            return f"✅ Solicitud enviada\nMonto: ${monto}"
+        else:
+            return "❌ Saldo insuficiente"
+    except: return "⚠️ /retirar [monto]"
+
+def ver_retiros():
+    try:
+        c = conectar_db().cursor()
+        c.execute("SELECT * FROM retiros WHERE estado='pendiente'")
+        rets = c.fetchall()
+        if not rets: return "✅ Sin retiros pendientes"
+        txt = "📥 <b>RETIROS PENDIENTES</b>\n\n"
+        for r in rets:
+            txt += f"🔸 ID:<code>{r[0]}</code>\nUser:<code>{r[1]}</code>\nMonto: <b>${r[2]}</b>\n/aprobar{r[0]}\n──────────\n"
+        return txt
+    except: return "❌ Error"
+
+def aprobar_retiro(id_retiro):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("UPDATE retiros SET estado='aprobado' WHERE id=?", (id_retiro,))
+        conn.commit()
+        conn.close()
+        return f"✅ Retiro #{id_retiro} Aprobado"
+    except: return "❌ Error"
+
+# 🎫 CUPONES
+def crear_cupon(codigo, monto, usos=1):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("INSERT OR REPLACE INTO cupones VALUES (?, ?, ?)", (codigo, monto, usos))
+        conn.commit()
+        conn.close()
+        return f"🎫 Creado: {codigo} | ${monto}"
+    except: return "❌ Error"
+
+def canjear_cupon(uid, codigo):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("SELECT monto, usos FROM cupones WHERE codigo=?", (codigo,))
+        res = c.fetchone()
+        if not res: return "❌ Código inválido"
+        monto, usos = res
+        if usos <= 0: return "⏳ Ya usado"
+        c.execute("UPDATE usuarios SET saldo = saldo + ? WHERE id=?", (monto, uid))
+        c.execute("UPDATE cupones SET usos = usos - 1 WHERE codigo=?", (codigo,))
+        conn.commit()
+        conn.close()
+        return f"✅ Canjeado! +${monto}"
+    except: return "❌ Error"
+
+# 📤 TRANSFERENCIAS
+def transferir_saldo(uid_origen, uid_destino, monto):
+    try:
+        monto = float(monto)
+        uid_destino = int(uid_destino)
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("SELECT saldo FROM usuarios WHERE id=?", (uid_origen,))
+        saldo_o = c.fetchone()[0]
+        if saldo_o < monto: return "❌ Saldo insuficiente"
+        c.execute("SELECT id FROM usuarios WHERE id=?", (uid_destino,))
+        if not c.fetchone(): return "❌ Usuario no existe"
+        c.execute("UPDATE usuarios SET saldo = saldo - ? WHERE id=?", (monto, uid_origen))
+        c.execute("UPDATE usuarios SET saldo = saldo + ? WHERE id=?", (monto, uid_destino))
+        c.execute("INSERT INTO movimientos (user_id, tipo, monto, detalle, fecha) VALUES (?, 'ENVIADO', ?, ?, ?)",
+                  (uid_origen, monto, f"A {uid_destino}", hora_actual()))
+        c.execute("INSERT INTO movimientos (user_id, tipo, monto, detalle, fecha) VALUES (?, 'RECIBIDO', ?, ?, ?)",
+                  (uid_destino, monto, f"De {uid_origen}", hora_actual()))
+        conn.commit()
+        conn.close()
+        return f"✅ Enviado ${monto} a {uid_destino}"
+    except: return "⚠️ /transferir [ID] [MONTO]"
+
+# 📜 HISTORIAL
+def ver_movimientos(uid):
+    try:
+        c = conectar_db().cursor()
+        c.execute("SELECT * FROM movimientos WHERE user_id=? ORDER BY id DESC LIMIT 15", (uid,))
+        movs = c.fetchall()
+        if not movs: return "📝 Sin movimientos"
+        txt = "📜 <b>HISTORIAL</b>\n\n"
+        for m in movs:
+            tipo = "📥" if m[2] == "RECIBIDO" else "📤"
+            txt += f"{tipo} <b>${m[3]}</b> | {m[4]}\n{m[5]}\n──────────\n"
+        return txt
+    except: return "❌ Error"
+
+# ==============================================
+# ⚙️ ADMINISTRACIÓN
+# ==============================================
+
+# 📋 LOGS
+def registrar_accion(admin_id, accion, objetivo=""):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("INSERT INTO logs (admin_id, accion, objetivo, fecha) VALUES (?, ?, ?, ?)",
+                  (admin_id, accion, objetivo, hora_actual()))
+        conn.commit()
+        conn.close()
+    except: pass
+
+def ver_logs():
+    try:
+        c = conectar_db().cursor()
+        c.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 20")
+        logs = c.fetchall()
+        if not logs: return "📝 Sin registros"
+        txt = "📋 <b>HISTORIAL DE ACCIONES</b>\n\n"
+        for log in logs:
+            txt += f"🔹 {log[4]}\nAdmin: {log[1]} | {log[2]} {log[3]}\n──────────\n"
+        return txt
+    except: return "❌ Error"
+
+# 👮 SUB-ADMINS
+def add_subadmin(uid):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("INSERT OR IGNORE INTO subadmins VALUES (?)", (uid,))
+        conn.commit()
+        return f"✅ Sub-Admin {uid} agregado"
+    except: return "❌ Error"
+
+def del_subadmin(uid):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("DELETE FROM subadmins WHERE user_id=?", (uid,))
+        conn.commit()
+        return f"❌ Sub-Admin {uid} eliminado"
+    except: return "❌ Error"
+
+def lista_subadmins():
+    try:
+        c = conectar_db()
+        c.execute("SELECT * FROM subadmins")
+        subs = c.fetchall()
+        if not subs: return "📝 Sin sub-admins"
+        txt = "👮 <b>LISTA DE SUB-ADMINS</b>\n\n"
+        for s in subs: txt += f"🔹 <code>{s[0]}</code>\n"
+        return txt
+    except: return "❌ Error"
+
+def es_subadmin(uid):
+    try:
+        c = conectar_db()
+        c.execute("SELECT * FROM subadmins WHERE user_id=?", (uid,))
+        return c.fetchone() is not None
+    except: return False
+
+# 📊 TOP
+def top_usuarios():
+    try:
+        c = conectar_db()
+        c.execute("SELECT id, nombre, saldo FROM usuarios ORDER BY saldo DESC LIMIT 10")
+        top = c.fetchall()
+        if not top: return "📊 Sin datos"
+        txt = "🏆 <b>TOP 10 USUARIOS</b>\n\n"
+        for i,u in enumerate(top,1): txt += f"{i}️⃣ <code>{u[0]}</code>\n👤 {u[1]}\n💰 ${u[2]}\n──────────\n"
+        return txt
+    except: return "❌ Error"
+
+# 🔒 MANTENIMIENTO
+MANTENIMIENTO = False
+def activar_mantenimiento(): global MANTENIMIENTO; MANTENIMIENTO = True; return "🔧 Mantenimiento ON"
+def desactivar_mantenimiento(): global MANTENIMIENTO; MANTENIMIENTO = False; return "✅ Mantenimiento OFF"
+
+# 📤 EXPORTAR
+def exportar_usuarios():
+    try:
+        c = conectar_db()
+        c.execute("SELECT id, nombre, saldo FROM usuarios")
+        users = c.fetchall()
+        archivo = "usuarios.txt"
+        with open(archivo,"w") as f:
+            for u in users: f.write(f"ID: {u[0]} | NOM: {u[1]} | $:{u[2]}\n")
+        return archivo, f"✅ Exportado! {len(users)} usuarios"
+    except: return None, "❌ Error"
+
+# ==============================================
+# 🚀 FUNCIONES PREMIUM
+# ==============================================
+
+# 🏅 NIVELES
+def actualizar_nivel(uid):
+    try:
+        c = conectar_db()
+        c.execute("SELECT saldo, nivel FROM usuarios WHERE id=?", (uid,))
+        saldo, nivel_actual = c.fetchone()
+        if saldo >= 1000: nuevo_nivel = "💎 DIAMANTE"; desc = 15
+        elif saldo >= 500: nuevo_nivel = "💛 ORO"; desc = 10
+        elif saldo >= 100: nuevo_nivel = "💿 PLATA"; desc = 5
+        else: nuevo_nivel = "🔰 BRONCE"; desc = 0
+        if nivel_actual != nuevo_nivel:
+            c.execute("UPDATE usuarios SET nivel=? WHERE id=?", (nuevo_nivel, uid))
+            conectar_db().commit()
+        return desc, nuevo_nivel
+    except: return 0, "🔰 BRONCE"
+
+def panel_niveles(uid):
+    desc, niv = actualizar_nivel(uid)
+    return f"""
+🏅 <b>𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐃𝐄 𝐍𝐈𝐕𝐄𝐋𝐄𝐒</b>
+
+✨ Tu Nivel: <b>{niv}</b>
+🎁 Descuento: <b>{desc}%</b>
+
+📊 Requisitos:
+🔰 BRONCE: $0 - $99
+💿 PLATA: $100 - $499
+💛 ORO: $500 - $999
+💎 DIAMANTE: +$1000
+"""
+
+# 📢 CANAL OBLIGATORIO
+CANAL_REQUERIDO = "@tu_canal"
+def usuario_en_canal(uid, bot):
+    try:
+        info = bot.get_chat_member(CANAL_REQUERIDO, uid)
+        return info.status not in ['left', 'kicked']
+    except: return False
+def mensaje_unirse():
+    return f"""
+📢 <b>𝐀𝐂𝐂𝐄𝐒𝐎 𝐑𝐄𝐒𝐓𝐑𝐈𝐍𝐆𝐈𝐃𝐎</b>
+
+Únete para usar el bot:
+👉 {CANAL_REQUERIDO}
+"""
+
+# 🧾 FACTURACIÓN
+def generar_ticket(id_op, uid, monto, tipo):
+    return f"""
+🧾 <b>𝐓𝐈𝐂𝐊𝐄𝐓 𝐃𝐄 𝐎𝐏𝐄𝐑𝐀𝐂𝐈Ó𝐍</b>
+
+🆔 ID: <code>#{id_op}</code>
+👤 Usuario: <code>{uid}</code>
+💰 Monto: <b>${monto}</b>
+📝 Tipo: <b>{tipo}</b>
+📅 Fecha: <b>{hora_actual()}</b>
+
+✅ OPERACIÓN EXITOSA
+"""
+
+# 🔁 REFERIDOS
+def registrar_referido(uid_invitor, uid_new):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM referidos WHERE user_id=?", (uid_new,))
+        if c.fetchone(): return
+        c.execute("INSERT INTO referidos VALUES (?, ?)", (uid_new, uid_invitor))
+        c.execute("UPDATE usuarios SET saldo = saldo + 5 WHERE id=?", (uid_invitor,))
+        conn.commit()
+        conn.close()
+    except: pass
+
+def mis_referidos(uid):
+    try:
+        c = conectar_db()
+        c.execute("SELECT COUNT(*) FROM referidos WHERE invitador=?", (uid,))
+        cant = c.fetchone()[0]
+        return f"""
+👥 <b>𝐌𝐈𝐒 𝐑𝐄𝐅𝐄𝐑𝐈𝐃𝐎𝐒</b>
+
+🔢 Invitados: <b>{cant}</b>
+💰 Ganaste: <b>${cant * 5}</b>
+
+🔗 Enlace:
+<code>https://t.me/tu_bot?start={uid}</code>
+"""
+    except: return "❌ Error"
+
+# ==============================================
+# 🛠️ HERRAMIENTAS
+# ==============================================
+def generar_tarjeta(bin_num):
+    try:
+        bin_num = str(bin_num)[:6]
+        mes = random.randint(1,12); anio = random.randint(25,30); cvv = random.randint(100,999)
+        numero = bin_num
+        while len(numero) < 15: numero += str(random.randint(0,9))
+        suma=0; pos=0; reverso = numero[::-1]
+        for d in reverso:
+            temp=int(d)*2 if pos%2==0 else int(d)
+            suma+= temp-9 if temp>9 else temp
+            pos+=1
+        dv = 10-(suma%10); dv=0 if dv==10 else dv
+        tarjeta = bin_num + numero[6:] + str(dv)
+        return f"💳 <code>{tarjeta}|{mes:02d}|20{anio}|{cvv}</code>"
+    except: return "⚠️ /gen [BIN]"
+
+def verificar_bin(bin_num):
+    try:
+        r = requests.get(f"https://bins.antipublic.cc/bins/{bin_num}").json()
+        return f"🏦 {r['bank']}\n🌍 {r['country_name']}\n💳 {r['brand']} {r['type']}"
+    except: return "❌ Error"
+
+def calcular_porcentaje(num, por):
+    try:
+        num=float(num); por=float(por); res=(num*por)/100; total=num-res
+        return f"🧮 ${num} - {por}% = <b>${total:.2f}</b>\n(Ahorraste: ${res:.2f})"
+    except: return "⚠️ /calcular [MONTO] [PORCENTAJE]"
+
+def generar_contraseña(lon=12):
+    car = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()"
+    return "🔐 <code>" + ''.join(random.choice(car) for _ in range(int(lon))) + "</code>"
+
+def convertir_moneda(cant):
+    try:
+        cant = float(cant); bs = cant * 6.96
+        return f"💵 ${cant} = 🇧🇴 {bs:.2f} Bs"
+    except: return "⚠️ /convertir [CANTIDAD]"
+
+def jugar_dado(): return f"🎲 Salió el <b>{random.randint(1,6)}</b>"
+def jugar_moneda(): return f"🪙 Salió: <b>{random.choice(['CARA','CRUZ'])}</b>"
+
+def guardar_apunte(uid, txt):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("INSERT INTO apuntes VALUES (null, ?, ?, ?)", (uid, txt, hora_actual()))
+        conn.commit()
+        return "✅ Guardado!"
+    except: return "❌ Error"
+def ver_apuntes(uid):
+    try:
+        c = conectar_db()
+        c.execute("SELECT texto, fecha FROM apuntes WHERE user_id=? ORDER BY id DESC", (uid,))
+        aps = c.fetchall()
+        if not aps: return "📝 Sin apuntes"
+        return "\n".join([f"📝 {a[1]}\n{a[0]}\n───" for a in aps])
+    except: return "❌ Error"
+
+def agregar_item(uid, it):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("INSERT INTO lista_compra VALUES (null, ?, ?)", (uid, it))
+        conn.commit()
+        return "✅ Agregado!"
+    except: return "❌ Error"
+def ver_lista(uid):
+    try:
+        c = conectar_db()
+        c.execute("SELECT item FROM lista_compra WHERE user_id=?", (uid,))
+        its = c.fetchall()
+        if not its: return "🛒 Lista vacía"
+        return "🛒 <b>MI LISTA</b>\n\n" + "\n".join([f"🔹 {i[0]}" for i in its])
+    except: return "❌ Error"
+def limpiar_lista(uid):
+    try:
+        conn = conectar_db()
+        c = conn.cursor()
+        c.execute("DELETE FROM lista_compra WHERE user_id=?", (uid,))
+        conn.commit()
+        return "🗑️ Lista vaciada"
+    except: return "❌ Error"
