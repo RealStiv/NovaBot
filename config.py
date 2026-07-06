@@ -11,7 +11,7 @@ ADMINS = [8831594637, 8831594637]
 
 # 🔌 𝐂𝐎𝐍𝐄𝐗𝐈𝐎𝐍 𝐀 𝐋𝐀 𝐀𝐏𝐈
 API_KEY = "59c9b7701d64e6dd70714d0311b6a1f2"  # Key de tu proveedor de servicios
-API_URL = "https://api.servicios.com/panel/api" # URL de tu API
+API_URL = "https://bulkmedya.org/api/v2" # URL de tu API
 
 # ==============================================
 # 🛡️ 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐀𝐍𝐓𝐈-𝐒𝐏𝐀𝐌
