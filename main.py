@@ -207,5 +207,49 @@ def seguridad(m):
 # ==============================================
 # 🚀 INICIAR
 # ==============================================
+# ==============================================
+# 🚀 NUEVOS COMANDOS
+# ==============================================
+
+# 💳 GENERAR TARJETA
+@bot.message_handler(commands=['gen', 'generar', 'ccgen'])
+def cmd_gen(message):
+    try:
+        bin_num = message.text.split()[1]
+        bot.send_message(message.chat.id, generar_tarjeta(bin_num), parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ <b>Uso:</b>\n/gen [BIN]", parse_mode="html")
+
+# 🔍 VERIFICAR BIN
+@bot.message_handler(commands=['bin', 'verbin', 'checkbin'])
+def cmd_bin(message):
+    try:
+        bin_num = message.text.split()[1]
+        bot.send_message(message.chat.id, verificar_bin(bin_num), parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ <b>Uso:</b>\n/bin [NUMERO]", parse_mode="html")
+
+# 🧮 CALCULADORA
+@bot.message_handler(commands=['calcular', 'calc', 'porcentaje'])
+def cmd_calc(message):
+    try:
+        monto = message.text.split()[1]
+        por = message.text.split()[2]
+        bot.send_message(message.chat.id, calcular_porcentaje(monto, por), parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ <b>Uso:</b>\n/calcular [MONTO] [PORCENTAJE]", parse_mode="html")
+
+# 📝 APUNTES
+@bot.message_handler(commands=['apunte', 'nota', 'guardar'])
+def cmd_apunte(message):
+    try:
+        texto = message.text.split(" ", 1)[1]
+        bot.send_message(message.chat.id, guardar_apunte(message.from_user.id, texto), parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ <b>Uso:</b>\n/apunte [texto]", parse_mode="html")
+
+@bot.message_handler(commands=['misapuntes', 'notas'])
+def cmd_mis_apuntes(message):
+    bot.send_message(message.chat.id, ver_apuntes(message.from_user.id), parse_mode="html")
 print("✅ BOT COMPLETO ENCENDIDO")
 bot.polling(none_stop=True)
