@@ -602,7 +602,106 @@ def seguridad_y_botones(message):
 # ==============================================
 # 🚀 INICIAR BOT
 # ==============================================
-    
+    # ==============================================
+# 🛡️ SISTEMA DE ADMIN - NOVA BOT
+# ==============================================
+
+# 🔄 REINICIO
+@bot.message_handler(commands=['reiniciar', 'restart'])
+def cmd_reiniciar(message):
+    if message.from_user.id in ADMINS:
+        bot.send_message(message.chat.id, "🔄 <b>REINICIANDO BOT...</b>", parse_mode="html")
+        exit()
+
+# 🚀 COMANDOS
+@bot.message_handler(commands=['paneladmin'])
+def cmd_panel(message):
+    if message.from_user.id in ADMINS:
+        txt, mk = panel_admin()
+        bot.send_message(message.chat.id, txt, reply_markup=mk, parse_mode="html")
+
+@bot.message_handler(commands=['addgrupo'])
+def cmd_add(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        ok, txt = add_grupo(int(message.text.split()[1]))
+        bot.send_message(message.chat.id, txt, parse_mode="html")
+    except: bot.send_message(message.chat.id, "⚠️ /addgrupo [ID]")
+
+@bot.message_handler(commands=['delgrupo'])
+def cmd_del(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        ok, txt = del_grupo(int(message.text.split()[1]))
+        bot.send_message(message.chat.id, txt, parse_mode="html")
+    except: bot.send_message(message.chat.id, "⚠️ /delgrupo [ID]")
+
+@bot.message_handler(commands=['userinfo'])
+def cmd_userinfo(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        bot.send_message(message.chat.id, info_user(int(message.text.split()[1]), bot), parse_mode="html")
+    except: bot.send_message(message.chat.id, "⚠️ /userinfo [ID]")
+
+@bot.message_handler(commands=['saldo'])
+def cmd_saldo(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        bot.send_message(message.chat.id, saldo_user(int(message.text.split()[1])), parse_mode="html")
+    except: bot.send_message(message.chat.id, "⚠️ /saldo [ID]")
+
+@bot.message_handler(commands=['ban'])
+def cmd_ban(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        ok, txt = ban_user(int(message.text.split()[1]))
+        bot.send_message(message.chat.id, txt, parse_mode="html")
+    except: bot.send_message(message.chat.id, "⚠️ /ban [ID]")
+
+@bot.message_handler(commands=['unban'])
+def cmd_unban(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        ok, txt = unban_user(int(message.text.split()[1]))
+        bot.send_message(message.chat.id, txt, parse_mode="html")
+    except: bot.send_message(message.chat.id, "⚠️ /unban [ID]")
+
+@bot.message_handler(commands=['historialpagos'])
+def cmd_historial(message):
+    if message.from_user.id in ADMINS:
+        bot.send_message(message.chat.id, historial_pagos(), parse_mode="html")
+
+@bot.message_handler(commands=['pagospendientes'])
+def cmd_pendientes(message):
+    if message.from_user.id in ADMINS:
+        bot.send_message(message.chat.id, pendientes_pagos(), parse_mode="html")
+
+@bot.message_handler(commands=['metodospago'])
+def cmd_metodos(message):
+    if message.from_user.id in ADMINS:
+        bot.send_message(message.chat.id, metodos_pago(), parse_mode="html")
+
+@bot.message_handler(commands=['estadisticaspagos'])
+def cmd_stats(message):
+    if message.from_user.id in ADMINS:
+        bot.send_message(message.chat.id, stats_pagos(), parse_mode="html")
+
+# 🔘 BOTONES INLINE
+@bot.callback_query_handler(func=lambda call: True)
+def callback(call):
+    botones(call, bot)
+
+# 🛡️ SEGURIDAD
+@bot.message_handler(func=lambda m: True)
+def seguridad(m):
+    if not verificar_acceso(m.chat.id, m.from_user.id):
+        bloquear_spam(m, bot)
+
+# ==============================================
+# 🚀 INICIAR BOT
+# ==============================================
+bot.polling(none_stop=True)
+
     while True:
         try:
             bot.polling(none_stop=True, interval=1, timeout=20)
