@@ -326,6 +326,99 @@ if __name__ == "__main__":
     print("🤖 BOT ENCENDIDO Y FUNCIONANDO!")
     print("👑 PANEL ADMIN ACTIVO")
     print("🚀 Listo para recibir comandos...")
+# ==============================================
+# 🛡️ SEGURIDAD
+# ==============================================
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    if not verificar_acceso(message.chat.id, message.from_user.id):
+        bloquear_spam(message, bot)
+        return
+    # ... RESTO DE TU CÓDIGO ...
+
+# ==============================================
+# 🔘 MANEJAR BOTONES
+# ==============================================
+@bot.callback_query_handler(func=lambda call: True)
+def callback_handler(call):
+    manejar_callback(call, bot)
+
+# ==============================================
+# 🚀 COMANDOS DIRECTOS
+# ==============================================
+@bot.message_handler(commands=['paneladmin'])
+def cmd_panel(message):
+    if message.from_user.id in ADMINS:
+        bot.send_message(message.chat.id, panel_admin_grupos(), parse_mode="html")
+
+@bot.message_handler(commands=['addgrupo'])
+def cmd_add(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        id_grupo = int(message.text.split()[1])
+        ok, txt = agregar_grupo_autorizado(id_grupo)
+        bot.send_message(message.chat.id, txt, parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ Uso: /addgrupo [ID]")
+
+@bot.message_handler(commands=['delgrupo'])
+def cmd_del(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        id_grupo = int(message.text.split()[1])
+        ok, txt = eliminar_grupo_autorizado(id_grupo)
+        bot.send_message(message.chat.id, txt, parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ Uso: /delgrupo [ID]")
+
+@bot.message_handler(commands=['listagrupos'])
+def cmd_list(message):
+    if message.from_user.id not in ADMINS: return
+    bot.send_message(message.chat.id, listar_grupos_autorizados(), parse_mode="html")
+
+@bot.message_handler(commands=['infogrupo'])
+def cmd_info(message):
+    if message.from_user.id not in ADMINS: return
+    bot.send_message(message.chat.id, info_grupo_actual(message), parse_mode="html")
+
+@bot.message_handler(commands=['userinfo'])
+def cmd_userinfo(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        user_id = int(message.text.split()[1])
+        bot.send_message(message.chat.id, info_usuario_completo(user_id, bot), parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ Uso: /userinfo [ID]")
+
+@bot.message_handler(commands=['saldo'])
+def cmd_saldo(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        user_id = int(message.text.split()[1])
+        bot.send_message(message.chat.id, ver_saldo_usuario(user_id), parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ Uso: /saldo [ID]")
+
+@bot.message_handler(commands=['ban'])
+def cmd_ban(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        user_id = int(message.text.split()[1])
+        ok, txt = banear_usuario_db(user_id)
+        bot.send_message(message.chat.id, txt, parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ Uso: /ban [ID]")
+
+@bot.message_handler(commands=['unban'])
+def cmd_unban(message):
+    if message.from_user.id not in ADMINS: return
+    try:
+        user_id = int(message.text.split()[1])
+        ok, txt = desbanear_usuario_db(user_id)
+        bot.send_message(message.chat.id, txt, parse_mode="html")
+    except:
+        bot.send_message(message.chat.id, "⚠️ Uso: /unban [ID]")
+
     
     while True:
         try:
