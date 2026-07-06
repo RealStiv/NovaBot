@@ -168,7 +168,7 @@ def desbanear_usuario_db(user_id):
         return False, "❌ Error al desbanear"
 
 # ==============================================
-# 🔘 MANEJADOR DE BOTONES INLINE (CALLBACK)
+# 🔘 MANEJADOR DE BOTONES INLINE
 # ==============================================
 
 def manejar_callback(call, bot):
@@ -176,12 +176,10 @@ def manejar_callback(call, bot):
     chat_id = call.message.chat.id
     data = call.data
 
-    # Solo admins
     if user_id not in ADMINS:
         bot.answer_callback_query(call.id, text="❌ No permitido", show_alert=True)
         return
 
-    # CONECTAR CON FUNCIONES
     if data == "panel_grupos":
         bot.send_message(chat_id, panel_admin_grupos(), parse_mode="html")
         
@@ -192,16 +190,15 @@ def manejar_callback(call, bot):
         bot.send_message(chat_id, info_grupo_actual(call.message), parse_mode="html")
         
     elif data == "ver_usuario":
-        bot.send_message(chat_id, "⚠️ Usa: /userinfo [ID]", parse_mode="html")
+        bot.send_message(chat_id, "⚠️ <b>Uso:</b>\nEscribe: /userinfo [ID]", parse_mode="html")
         
     elif data == "ver_saldo":
-        bot.send_message(chat_id, "⚠️ Usa: /saldo [ID]", parse_mode="html")
+        bot.send_message(chat_id, "⚠️ <b>Uso:</b>\nEscribe: /saldo [ID]", parse_mode="html")
         
     elif data == "banear_usuario":
-        bot.send_message(chat_id, "⚠️ Usa: /ban [ID]", parse_mode="html")
+        bot.send_message(chat_id, "⚠️ <b>Uso:</b>\nEscribe: /ban [ID]", parse_mode="html")
         
     elif data == "desbanear_usuario":
-        bot.send_message(chat_id, "⚠️ Usa: /unban [ID]", parse_mode="html")
+        bot.send_message(chat_id, "⚠️ <b>Uso:</b>\nEscribe: /unban [ID]", parse_mode="html")
 
-    # Quitar carga
     bot.answer_callback_query(call.id)
