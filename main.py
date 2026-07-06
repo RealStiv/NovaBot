@@ -419,7 +419,25 @@ def cmd_unban(message):
     except:
         bot.send_message(message.chat.id, "⚠️ Uso: /unban [ID]")
 
+
+    # ... todo tu código anterior ...
+
+# ==============================================
+# 🔄 COMANDO DE REINICIO
+# ==============================================
+@bot.message_handler(commands=['reiniciar', 'restart'])
+def cmd_reiniciar(message):
+    if message.from_user.id not in ADMINS:
+        return
+        
+    bot.send_message(message.chat.id, "🔄 <b>REINICIANDO BOT...</b>\nEspera unos segundos...", parse_mode="html")
     
+    print("🔄 Bot reiniciado por administrador")
+    exit()  # Cierra el proceso y Railway lo revive solo
+
+# ==============================================
+# 🚀 INICIAR BOT
+# ==============================================
     while True:
         try:
             bot.polling(none_stop=True, interval=1, timeout=20)
